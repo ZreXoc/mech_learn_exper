@@ -1,0 +1,1 @@
+{0: 'B-BANK', 1: 'B-COMMENTS_ADJ', 2: 'B-COMMENTS_N', 3: 'B-PRODUCT', 4: 'I-BANK', 5: 'I-COMMENTS_ADJ', 6: 'I-COMMENTS_N', 7: 'I-PRODUCT', 8: 'O', 9: '[UNK]'}

@@ -1,0 +1,27 @@
+1
+0
+Epochs: 1 | 
+                Loss:  367.830171 | 
+                Accuracy:  0.349021 |
+               
+1
+Epochs: 2 | 
+                Loss:  nan | 
+                Accuracy:  0.043944 |
+               
+2
+Epochs: 3 | 
+                Loss:  nan | 
+                Accuracy:  0.015134 |
+               
+3
+Epochs: 4 | 
+                Loss:  nan | 
+                Accuracy:  0.015148 |
+               
+4
+Epochs: 5 | 
+                Loss:  nan | 
+                Accuracy:  0.015054 |
+               
+5
