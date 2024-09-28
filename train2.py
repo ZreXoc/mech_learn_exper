@@ -35,12 +35,8 @@ def train_loop1(model: torch.nn.Module):
 
     dataset = CommentDataset(SPLITS['train'])
     len_data = len(dataset)
-    train_dataset, val_dataset = random_split(
-        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
-    train_loader = DataLoader(train_dataset, batch_size=batch_size,
+    train_loader = DataLoader(dataset, batch_size=batch_size,
                               shuffle=True, num_workers=num_workers, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            shuffle=True, num_workers=num_workers, drop_last=True)
 
     if use_cuda:
         model = model.cuda()
@@ -116,34 +112,10 @@ def train_loop1(model: torch.nn.Module):
             # 参数更新
             optimizer.step()
 
-        total_acc_val = 0
-        val_idx = 0
-        model.eval()
-        with torch.no_grad():
-            for val_data, val_label in val_loader:
-                val_idx += 1
-                val_label = val_label.to(device)
-                mask = val_data['attention_mask'].to(device)
-                # mask = torch.ones_like(val_data['attention_mask']).to(device)
-                input_id = val_data['input_ids'].to(device)
-                token_type_ids = val_data['token_type_ids'].to(device)
-                logits, = model(input_ids=input_id, attention_mask=mask, labels=None,
-                                token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
-                logits_clean = []
-                label_clean = []
-                label_clean = val_label[val_label != PAD_LABEL]
-                logits_clean = logits[val_label != PAD_LABEL]
-                predictions = logits_clean.argmax(dim=1)
-              # 计算准确率
-                acc = (predictions == label_clean).float().mean()  # TODO
-                print('val acc', acc.item())
-                total_acc_val += acc.item()
-
         print(
             f'''Epochs: {epoch_num + 1} | 
                 Loss: {total_loss_train / train_idx: .8f} | 
                 Accuracy: {total_acc_train / train_idx: .8f} |
-                val_Accuracy: {total_acc_val / val_idx: .8f} |
                ''')
 
         if (SAVE_FREQUENCE and not epoch_num % SAVE_FREQUENCE):
@@ -153,13 +125,8 @@ def train_loop1(model: torch.nn.Module):
 
 def train2(model: torch.nn.Module):
     dataset = CommentDataset(SPLITS['train'])
-    len_data = len(dataset)
-    train_dataset, val_dataset = random_split(
-        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
-    train_loader = DataLoader(train_dataset, batch_size=batch_size,
+    train_loader = DataLoader(dataset, batch_size=batch_size,
                               shuffle=True, num_workers=num_workers, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            shuffle=True, num_workers=num_workers, drop_last=True)
 
     if (use_cuda):
         model = model.cuda()
@@ -195,30 +162,10 @@ def train2(model: torch.nn.Module):
             # 参数更新
             optimizer.step()
 
-        total_acc_val = 0
-        val_idx = 0
-        model.eval()
-        with torch.no_grad():
-            for val_data, _val_label, mood_label in val_loader:
-                val_idx += 1
-                mood_label = mood_label.to(device)
-                mask = val_data['attention_mask'].to(device)
-                # mask = torch.ones_like(val_data['attention_mask']).to(device)
-                input_id = val_data['input_ids'].to(device)
-                token_type_ids = val_data['token_type_ids'].to(device)
-                logits, = model(input_ids=input_id, attention_mask=mask, labels=None,
-                                token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
-                predictions = logits.argmax(dim=1)
-              # 计算准确率
-                acc = (predictions == mood_label).float().mean()
-                # print('val acc',acc.item())
-                total_acc_val += acc.item()
-
         print(
             f'''Epochs: {epoch_num + 1} | 
                 Loss: {total_loss_train / train_idx: .8f} | 
                 Accuracy: {total_acc_train / train_idx: .8f} |
-                val_Accuracy: {total_acc_val / val_idx: .8f} |
                ''')
 
         if (SAVE_FREQUENCE and not epoch_num % SAVE_FREQUENCE):
