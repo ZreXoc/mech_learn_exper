@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-import time
+import logging
 import torch
 
 import os
 from torch.utils.data import DataLoader, random_split
 
 from tqdm import tqdm
-from transformers import BertForTokenClassification, BertForSequenceClassification
+from transformers import BertForTokenClassification, BertForSequenceClassification 
 
 from src.constants import LABELS, MAX_SEQ_LENGTH, MODEL_NAME, NUM_LABLES, PAD_LABEL, SPEC_LABEL, SPLITS
 from src.dataset import CommentDataset
 from src.model import BertModel
 from src.tokenizer import tokenize_and_align_labels
-# from transformers import BertModel, BertConfig
+import src.config
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["CUDA_LAUNCH_BLOCKING"] = '1'
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     # model1 = BertForTokenClassification.from_pretrained(MODEL_NAME, num_labels=NUM_LABLES)
     # train_loop1(model1)
 
-    print('''Task 2
+    logging.info('''Task 2
 ############################################
 ''')
     model2 = BertForSequenceClassification.from_pretrained(

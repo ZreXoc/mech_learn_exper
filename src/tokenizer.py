@@ -1,10 +1,11 @@
 import torch
 from transformers import BertForTokenClassification, BertTokenizerFast
 
-from src.constants import MODEL_NAME, PAD_LABEL, SPEC_LABEL
+from src.config import config
+from src.constants import PAD_LABEL, SPEC_LABEL
 
 # tokenizer = BertTokenizerFast.from_pretrained('/home/xic/.cache/huggingface/hub/models--bert-base-chinese/snapshots/c30a6ed22ab4564dc1e3b2ecbf6e766b0611a33f')
-tokenizer = BertTokenizerFast.from_pretrained(MODEL_NAME)
+tokenizer = BertTokenizerFast.from_pretrained(config.pretrained, cache_dir='./cache')
 
 def tokenize_and_align_labels(tokens,labels=None, tokenizer=tokenizer,
                               max_seq_len=512):

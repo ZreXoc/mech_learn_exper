@@ -1,7 +1,7 @@
 import os
 
 # MODEL_NAME = 'hfl/chinese-bert-wwm'
-MODEL_NAME = '/home/xic/.cache/huggingface/hub/models--bert-base-chinese/snapshots/c30a6ed22ab4564dc1e3b2ecbf6e766b0611a33f'
+# MODEL_NAME = '/home/xic/.cache/huggingface/hub/models--bert-base-chinese/snapshots/c30a6ed22ab4564dc1e3b2ecbf6e766b0611a33f'
 
 MAX_SEQ_LENGTH = 200 # 最长长度约为一百九十
 

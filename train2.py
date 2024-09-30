@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import time
+import logging
 import torch
 
 import os
@@ -8,36 +8,41 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 from transformers import BertForTokenClassification, BertForSequenceClassification
 
-from src.constants import LABELS, MAX_SEQ_LENGTH, MODEL_NAME, NUM_LABLES, PAD_LABEL, SPEC_LABEL, SPLITS
+from src.constants import LABELS, MAX_SEQ_LENGTH, NUM_LABLES, PAD_LABEL, SPEC_LABEL, SPLITS
 from src.dataset import CommentDataset
-from src.model import BertModel
+# from src.model import BertModel
 from src.tokenizer import tokenize_and_align_labels
-# from transformers import BertModel, BertConfig
+from transformers import BertModel, BertConfig
+from src.config import config, out_dir
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["CUDA_LAUNCH_BLOCKING"] = '1'
 os.environ["TORCH_USE_CUDA_DSA"] = 'true'
 
-SAVE_FREQUENCE = 2
+SAVE_FREQUENCE = config.save_freq
 
-batch_size = 40  # Too small
-LEARNING_RATE = 3e-5
-EPOCHS = 20
-num_workers = 4
+task_id = config.id
+
+BATCH_SIZE = config.batch_size  # Too small
+LEARNING_RATE = config.lr
+EPOCHS = config.niter
+NUM_WORKERS = config.workers
 use_cuda = torch.cuda.is_available()
 # use_cuda = False
 device = torch.device("cuda" if use_cuda else "cpu")
 
-stamp = time.strftime("%d%H%M")
 
+dataset = CommentDataset(SPLITS['train'])
 
 def train_loop1(model: torch.nn.Module):
-
-    dataset = CommentDataset(SPLITS['train'])
     len_data = len(dataset)
-    train_loader = DataLoader(dataset, batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers, drop_last=True)
 
+    train_dataset, val_dataset = random_split(
+        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                              shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
+                            shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
     if use_cuda:
         model = model.cuda()
 
@@ -60,6 +65,7 @@ def train_loop1(model: torch.nn.Module):
         model.parameters(), lr=LEARNING_RATE, eps=1e-8)
     best_acc = 0
     best_loss = 1000
+    logging.info(f'Start training task1')  
     model.zero_grad()
     for epoch_num in range(EPOCHS):
         total_acc_train = 0
@@ -67,16 +73,13 @@ def train_loop1(model: torch.nn.Module):
 
         train_idx = 0
         model.train()
-        for train_data, train_label in tqdm(train_loader):
+        for train_data, train_label, _mood_label in tqdm(train_loader):
             train_idx += 1
             train_label = train_label.to(device)
             mask = train_data['attention_mask'].to(device)
             # mask = torch.ones_like(train_data['attention_mask']).to(device)
             input_id = train_data['input_ids'].to(device)
             token_type_ids = train_data['token_type_ids'].to(device)
-            # print(train_label[0])
-            # print(mask[0])
-            # print(input_id[0])
             # print(input_id.size(), mask.size(),train_label.size(), token_type_ids.size())
             # 输入模型训练结果：损失及分类概率
             optimizer.zero_grad()
@@ -88,23 +91,10 @@ def train_loop1(model: torch.nn.Module):
             label_clean = []
             logits_clean = logits[train_label != PAD_LABEL]
             label_clean = train_label[train_label != PAD_LABEL]
-            # print('#tr', train_label)
-            # print(train_label.size(),logits_clean.size(),label_clean.size())
-            # print(SPEC_LABEL, train_label[0])
-            # print(SPEC_LABEL, train_label[1])
-            # print(label_clean[:MAX_SEQ_LENGTH])
             # 获取最大概率值
             predictions = logits_clean.argmax(dim=1)
           # 计算准确率
             acc = (predictions == label_clean).float().mean()  # TODO
-            # print(acc, len(train_dataset))
-            # print('logit',logits_clean)
-            # print('pred',predictions, predictions.size())
-            # print('pred',[torch.sum(predictions.eq(i)).item() for i in range(NUM_LABLES)])
-            # print('label',[torch.sum(label_clean.eq(i)).item() for i in range(NUM_LABLES)])
-            # print('id', train_idx)
-            # print('acc',acc.item())
-            # print('loss',loss.item())
             total_acc_train += acc.item()
             total_loss_train += loss.item()
       # 反向传递
@@ -112,25 +102,54 @@ def train_loop1(model: torch.nn.Module):
             # 参数更新
             optimizer.step()
 
-        print(
+        total_acc_val = 0
+        val_idx = 0
+        model.eval()
+        with torch.no_grad():
+            for val_data, val_label, _mood_label in val_loader:
+                val_idx += 1
+                val_label = val_label.to(device)
+                mask = val_data['attention_mask'].to(device)
+                # mask = torch.ones_like(val_data['attention_mask']).to(device)
+                input_id = val_data['input_ids'].to(device)
+                token_type_ids = val_data['token_type_ids'].to(device)
+                logits, = model(input_ids=input_id, attention_mask=mask, labels=None,
+                                token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
+                logits_clean = []
+                label_clean = []
+                label_clean = val_label[val_label != PAD_LABEL]
+                logits_clean = logits[val_label != PAD_LABEL]
+                predictions = logits_clean.argmax(dim=1)
+              # 计算准确率
+                acc = (predictions == label_clean).float().mean()  # TODO
+                print('val acc', acc.item())
+                total_acc_val += acc.item()
+
+        logging.info(
             f'''Epochs: {epoch_num + 1} | 
                 Loss: {total_loss_train / train_idx: .8f} | 
                 Accuracy: {total_acc_train / train_idx: .8f} |
+                val_Accuracy: {total_acc_val / val_idx: .8f} |
                ''')
 
         if (SAVE_FREQUENCE and not epoch_num % SAVE_FREQUENCE):
             torch.save(model.state_dict(),
-                       f'./model/{stamp}/{stamp}-t1-e{epoch_num+1}.pth')
+                       os.path.join(out_dir, f't2-e{epoch_num+1}.pt'))
 
 
 def train2(model: torch.nn.Module):
-    dataset = CommentDataset(SPLITS['train'])
-    train_loader = DataLoader(dataset, batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers, drop_last=True)
+    len_data = len(dataset)
+    train_dataset, val_dataset = random_split(
+        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                              shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
+                            shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
 
     if (use_cuda):
         model = model.cuda()
 
+    logging.info(f'Start training task2')  
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=LEARNING_RATE, eps=1e-8)
     for epoch_num in range(EPOCHS):
@@ -162,28 +181,43 @@ def train2(model: torch.nn.Module):
             # 参数更新
             optimizer.step()
 
-        print(
+        total_acc_val = 0
+        val_idx = 0
+        model.eval()
+        with torch.no_grad():
+            for val_data, _val_label, mood_label in val_loader:
+                val_idx += 1
+                mood_label = mood_label.to(device)
+                mask = val_data['attention_mask'].to(device)
+                # mask = torch.ones_like(val_data['attention_mask']).to(device)
+                input_id = val_data['input_ids'].to(device)
+                token_type_ids = val_data['token_type_ids'].to(device)
+                logits, = model(input_ids=input_id, attention_mask=mask, labels=None,
+                                token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
+                predictions = logits.argmax(dim=1)
+              # 计算准确率
+                acc = (predictions == mood_label).float().mean()
+                # print('val acc',acc.item())
+                total_acc_val += acc.item()
+
+        logging.info(
             f'''Epochs: {epoch_num + 1} | 
                 Loss: {total_loss_train / train_idx: .8f} | 
                 Accuracy: {total_acc_train / train_idx: .8f} |
+                val_Accuracy: {total_acc_val / val_idx: .8f} |
                ''')
 
         if (SAVE_FREQUENCE and not epoch_num % SAVE_FREQUENCE):
             torch.save(model.state_dict(),
-                       f'./model/{stamp}/{stamp}-t2-e{epoch_num+1}.pth')
-
+                       os.path.join(out_dir, f't2-e{epoch_num+1}.pt'))
 
 if __name__ == '__main__':
-    if (SAVE_FREQUENCE):
-        os.mkdir(f'./model/{stamp}')
-    # model = BertModel.from_pretrained('bert-base-chinese')
-    # model = BertModel(NUM_LABLES)
-    # model1 = BertForTokenClassification.from_pretrained(MODEL_NAME, num_labels=NUM_LABLES)
-    # train_loop1(model1)
+    model1 = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES,cache_dir='./cache')
+    train_loop1(model1)
 
-    print('''Task 2
+    logging.info('''Task 2
 ############################################
 ''')
     model2 = BertForSequenceClassification.from_pretrained(
-        MODEL_NAME, num_labels=3)
+        config.pretrained, num_labels=3, cache_dir='./cache')
     train2(model2)
