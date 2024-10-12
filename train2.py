@@ -27,7 +27,7 @@ BATCH_SIZE = config.batch_size  # Too small
 LEARNING_RATE = config.lr
 EPOCHS = config.niter
 NUM_WORKERS = config.workers
-use_cuda = torch.cuda.is_available()
+use_cuda = config.cuda
 # use_cuda = False
 device = torch.device("cuda" if use_cuda else "cpu")
 
@@ -108,6 +108,7 @@ def train_loop1(model: torch.nn.Module):
         with torch.no_grad():
             for val_data, val_label, _mood_label in val_loader:
                 val_idx += 1
+                print(val_idx)
                 val_label = val_label.to(device)
                 mask = val_data['attention_mask'].to(device)
                 # mask = torch.ones_like(val_data['attention_mask']).to(device)
@@ -134,7 +135,7 @@ def train_loop1(model: torch.nn.Module):
 
         if (SAVE_FREQUENCE and not epoch_num % SAVE_FREQUENCE):
             torch.save(model.state_dict(),
-                       os.path.join(out_dir, f't2-e{epoch_num+1}.pt'))
+                       os.path.join(out_dir, f't1-e{epoch_num+1}.pt'))
 
 
 def train2(model: torch.nn.Module):
@@ -212,6 +213,9 @@ def train2(model: torch.nn.Module):
                        os.path.join(out_dir, f't2-e{epoch_num+1}.pt'))
 
 if __name__ == '__main__':
+    logging.info('''Task 1
+############################################
+''')
     model1 = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES,cache_dir='./cache')
     train_loop1(model1)
 
