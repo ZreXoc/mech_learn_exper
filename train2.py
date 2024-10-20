@@ -3,15 +3,15 @@ import logging
 import torch
 
 import os
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import ConcatDataset, DataLoader, random_split
 
 from tqdm import tqdm
 from transformers import BertForTokenClassification, BertForSequenceClassification
 
 from src.constants import LABELS, MAX_SEQ_LENGTH, NUM_LABLES, PAD_LABEL, SPEC_LABEL, SPLITS
-from src.dataset import CommentDataset
+from src.dataset import CommentDataset, MoodDataset
 # from src.model import BertModel
-from src.tokenizer import tokenize_and_align_labels
+from src.tokenizer2 import tokenizer
 from transformers import BertModel, BertConfig
 from src.config import config, out_dir
 
@@ -32,13 +32,12 @@ use_cuda = config.cuda
 device = torch.device("cuda" if use_cuda else "cpu")
 
 
-dataset = CommentDataset(SPLITS['train'])
 
 def train_loop1(model: torch.nn.Module):
-    len_data = len(dataset)
+    dataset = CommentDataset(SPLITS['train'])
 
     train_dataset, val_dataset = random_split(
-        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
+        dataset, [0.9, 0.1])
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
                               shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
@@ -93,6 +92,9 @@ def train_loop1(model: torch.nn.Module):
             label_clean = train_label[train_label != PAD_LABEL]
             # 获取最大概率值
             predictions = logits_clean.argmax(dim=1)
+
+
+
           # 计算准确率
             acc = (predictions == label_clean).float().mean()  # TODO
             total_acc_train += acc.item()
@@ -108,7 +110,7 @@ def train_loop1(model: torch.nn.Module):
         with torch.no_grad():
             for val_data, val_label, _mood_label in val_loader:
                 val_idx += 1
-                print(val_idx)
+                # print(val_idx)
                 val_label = val_label.to(device)
                 mask = val_data['attention_mask'].to(device)
                 # mask = torch.ones_like(val_data['attention_mask']).to(device)
@@ -123,7 +125,7 @@ def train_loop1(model: torch.nn.Module):
                 predictions = logits_clean.argmax(dim=1)
               # 计算准确率
                 acc = (predictions == label_clean).float().mean()  # TODO
-                print('val acc', acc.item())
+                # print('val acc', acc.item())
                 total_acc_val += acc.item()
 
         logging.info(
@@ -139,9 +141,10 @@ def train_loop1(model: torch.nn.Module):
 
 
 def train2(model: torch.nn.Module):
-    len_data = len(dataset)
+    dataset = MoodDataset()
     train_dataset, val_dataset = random_split(
-        dataset, [int(len_data*0.9), len_data-int(len_data*0.9)])
+        dataset, [0.9,0.1])
+    train_dataset = ConcatDataset([train_dataset, MoodDataset(fromRetrans=True)])
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
                               shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
@@ -159,7 +162,7 @@ def train2(model: torch.nn.Module):
 
         train_idx = 0
         model.train()
-        for train_data, _train_label, mood_label in tqdm(train_loader):
+        for train_data, mood_label in tqdm(train_loader):
             train_idx += 1
             mask = train_data['attention_mask'].to(device)
             # mask = torch.ones_like(train_data['attention_mask']).to(device)
@@ -186,7 +189,7 @@ def train2(model: torch.nn.Module):
         val_idx = 0
         model.eval()
         with torch.no_grad():
-            for val_data, _val_label, mood_label in val_loader:
+            for val_data, mood_label in val_loader:
                 val_idx += 1
                 mood_label = mood_label.to(device)
                 mask = val_data['attention_mask'].to(device)
@@ -213,15 +216,17 @@ def train2(model: torch.nn.Module):
                        os.path.join(out_dir, f't2-e{epoch_num+1}.pt'))
 
 if __name__ == '__main__':
-    logging.info('''Task 1
-############################################
-''')
-    model1 = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES,cache_dir='./cache')
-    train_loop1(model1)
+    # logging.info('''Task 1
+# ############################################
+# ''')
+    # model1 = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES,cache_dir='./cache')
+    # model1.resize_token_embeddings(len(tokenizer))
+    # train_loop1(model1)
 
     logging.info('''Task 2
 ############################################
 ''')
     model2 = BertForSequenceClassification.from_pretrained(
         config.pretrained, num_labels=3, cache_dir='./cache')
+    model2.resize_token_embeddings(len(tokenizer))
     train2(model2)
