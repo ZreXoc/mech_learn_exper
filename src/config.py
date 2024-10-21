@@ -30,7 +30,7 @@ parser.add_argument('--checkpoint_path',type=str,default='',
 parser.add_argument('--log',action='store_true',default=False,help="save log")  
 parser.add_argument('--debug',action='store_true',default=False,help="debug mode")  
 parser.add_argument('--out_dir',default=os.path.realpath('out'),help="output path")  
-parser.add_argument('--save_freq',type=int ,default=2,help="save frequence of model, default is save per 2 epochs")  
+parser.add_argument('--save_freq',type=int ,default=0,help="save frequence of model, default is save per 2 epochs")  
 parser.add_argument('--id',default=time.strftime("%d%H%M%S"),help="id of train")  
 config = parser.parse_args()
 out_dir = os.path.join(config.out_dir,f'{config.id}-{config.mode}')
@@ -59,6 +59,7 @@ else:
 # if opt.output:
 if True:
     logging.info(f'id: {config.id}')  
+    logging.info(f'save log: {config.log}')  
     logging.info(f'mode: {config.mode}')  
     logging.info(f'pretrained model: {config.pretrained}')  
     logging.info(f'num_workers: {config.workers}')  

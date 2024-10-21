@@ -32,7 +32,6 @@ use_cuda = config.cuda
 device = torch.device("cuda" if use_cuda else "cpu")
 
 
-
 def train_loop1(model: torch.nn.Module):
     dataset = CommentDataset(SPLITS['train'])
 
@@ -159,7 +158,6 @@ def train2(model: torch.nn.Module):
     for epoch_num in range(EPOCHS):
         total_acc_train = 0
         total_loss_train = 0
-
         train_idx = 0
         model.train()
         for train_data, mood_label in tqdm(train_loader):

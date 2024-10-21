@@ -6,8 +6,8 @@ lr=3e-5
 batch_size=40
 epochs=20
 save_freq=0
-pretrained=hfl/chinese-bert-wwm
-
+#pretrained=hfl/chinese-bert-wwm
+pretrained=cache/FinBERT/FinBERT_L-12_H-768_A-12_pytorch
 id=$(date "+%m%d%H%M")
 
 export TRANSFORMERS_OFFLINE=1

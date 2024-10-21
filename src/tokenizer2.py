@@ -26,11 +26,12 @@ def align_label(tokens, labels, origin_text):
     for token in tokens:
         token = token.strip('##')
         # q = origin_text.find(token, q)
-
-        # print(token, p, labels)
+        # print(token,out, p, labels[p], origin_text[p])
+        # print(len(token))
 
         out.append(labels[p])
         p += 1 if token == "[UNK]" else len(token)
+
 
     return out
 

@@ -34,6 +34,7 @@ def eval_token(model, sentence, with_mask=True, no_sep=True):
     # label_ids = torch.Tensor(align_word_ids(sentence)).unsqueeze(0).to(device)
     # print(input_ids)
     
+    print(input_ids, mask)
     logits = model(input_ids, mask, None)
 
     logits_clean  = []
