@@ -10,8 +10,8 @@ def rep_bank(w, labels, p):
     # print(w,labels)
     if(labels[0] == labels_to_ids['B-BANK']):
         out =  (dfb.sample(n=1).values[0]) if random.random() < p else w
-        print(w,labels)
-        print(f'replace {w} to {out}')
+        # print(w,labels)
+        # print(f'replace {w} to {out}')
         return out
 
     return w

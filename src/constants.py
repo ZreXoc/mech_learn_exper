@@ -8,7 +8,7 @@ MAX_SEQ_LENGTH = 200 # 最长长度约为一百九十
 ROOT_DIR = os.path.curdir
 
 SPLITS = {
-    'train': os.path.join(ROOT_DIR,'data/train_data_public.csv'),
+    'train': os.path.join(ROOT_DIR,'data/train_data_public_2.csv'),
     'test': os.path.join(ROOT_DIR, 'data/test_public.csv'),
 }
 

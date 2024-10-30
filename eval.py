@@ -19,11 +19,11 @@ df = pd.read_csv(SPLITS['test'])
 
 tokenized_data = []
 
-model_path1='./out/remote/10122325-train/t1-e16.pt'
-model_path2='./out/remote/10151258-train/t2-e18.pt'
+model_path1='./out/remote/10212228-train/t1-e16.pt'
+model_path2='./out/remote/10212228-train/t2-e19.pt'
 
-state_dict_task1 = torch.load(model_path1, weights_only=False)
-state_dict_task2 = torch.load(model_path2, weights_only=False)
+state_dict_task1 = torch.load(model_path1, weights_only=True)
+state_dict_task2 = torch.load(model_path2, weights_only=True)
 def eval_token(model, sentence, with_mask=True, no_sep=True):
     model.eval()
     data = tokenize_sentence(sentence)
@@ -34,7 +34,6 @@ def eval_token(model, sentence, with_mask=True, no_sep=True):
     # label_ids = torch.Tensor(align_word_ids(sentence)).unsqueeze(0).to(device)
     # print(input_ids)
     
-    print(input_ids, mask)
     logits = model(input_ids, mask, None)
 
     logits_clean  = []
@@ -79,8 +78,8 @@ df_out = df.copy()
 logging.info(f"with model: 1: {model_path1}; 2: {model_path2}")
 
 model = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES, cache_dir='./cache')
-model.load_state_dict(state_dict=state_dict_task1)
 model.resize_token_embeddings(len(tokenizer))
+model.load_state_dict(state_dict=state_dict_task1)
 
 if use_cuda:
     model = model.cuda()

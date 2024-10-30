@@ -12,7 +12,8 @@ class CommentDataset(Dataset):
     def __init__(self, path) -> None:
         self.path = path
         df = pd.read_csv(path, index_col=0)
-        # df = df.head(100)
+        df.drop(columns=['bank_topic'], inplace=True)
+        df = df.head(100)
 
         df = self.preprocess_data(df)
 
@@ -44,26 +45,26 @@ class CommentDataset(Dataset):
         df['BIO_anno'] = df['BIO_anno'].map(lambda x: [labels_to_ids[i] for i in x.split()])
 
         # 同类词替换
-        # nd = []
-        # random_indices = np.random.choice(df.index, size=len(df)*2, replace=True)
+        nd = []
+        random_indices = np.random.choice(df.index, size=len(df)*2, replace=True)
 
-        # random_samples = df.loc[random_indices]
+        random_samples = df.loc[random_indices]
 
-        # for i, row in random_samples.iterrows():
+        for i, row in random_samples.iterrows():
 
-            # text = row['text']
-            # label = row['BIO_anno']
-            # mood = row['class']
+            text = row['text']
+            label = row['BIO_anno']
+            mood = row['class']
 
-            # nt,nl,cu = replace(text,label, p=1, replaceFn=rep_bank)
-            # nd += [(''.join(nt),nl,mood)]
+            nt,nl,cu = replace(text,label, p=1, replaceFn=rep_bank)
+            nd += [(''.join(nt),nl,mood)]
 
 
-        # ndf = pd.DataFrame(nd, columns=df.columns)
+        ndf = pd.DataFrame(nd, columns=df.columns)
 
-        # df = pd.concat([df,ndf])
+        df = pd.concat([df,ndf])
         # print(df)
-        # print(len(df))
+        print(len(df))
 
         return df
 
@@ -80,21 +81,40 @@ class CommentDataset(Dataset):
         return len(self.df)
 
 class MoodDataset(Dataset):
-    def __init__(self, fromRetrans = False) -> None:
+    def __init__(self, withOrigin = True ,fromRetrans = False, withExt = False) -> None:
         self.isRetrans = fromRetrans
 
         data = None
+        if(withOrigin):
+            data = pd.read_csv(SPLITS['train']).drop(columns=['BIO_anno','bank_topic'])
+        else:
+            data = pd.read_csv(SPLITS['train'],nrows=0).drop(columns=['BIO_anno','bank_topic'])
 
+        data.set_index('id', inplace=True)
+
+        data['type'] = 'origin';
+
+
+
+        if(withExt):
+            df = pd.read_csv('./data/online_shopping_10_cats.csv')
+            df = df[df.iloc[:, 0] == '计算机']
+            df = df.rename(columns={'review': 'text', 'label': 'class'})
+            # df.drop(columns=['cat'])
+            df['type'] = 'ext'
+            # print(df.head())
+
+            data = pd.concat([data,df[['text', 'class','type']]])
 
         if(fromRetrans):
-            data = pd.read_csv('./data/trans.csv').rename(columns={"cn":"text"})
-            data.drop(columns=['en'],inplace=True)
-            data['isRetrans'] = 1
-        else:
-            data = pd.read_csv('./data/train_data_public.csv').drop(columns=['BIO_anno'])
-            data['isRetrans']=0
+            df = pd.read_csv('./data/trans.csv').rename(columns={"cn":"text"})
+            df.drop(columns=['en'],inplace=True)
+            df['type'] = 'trans';
+            data = pd.concat([data,df])
 
-        # data = data.head(1000)
+        # print(data.tail())
+
+        data = data.head(1000)
 
         tokenized_data=[]
         for i, row in data.iterrows():
@@ -105,6 +125,8 @@ class MoodDataset(Dataset):
             token['token_type_ids'] = token['token_type_ids'][0]
 
             tokenized_data.append(token)
+
+        data.reset_index(inplace=True)
 
         self.tokenized_data = tokenized_data
         self.mood = data['class'].values

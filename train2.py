@@ -8,6 +8,7 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split
 from tqdm import tqdm
 from transformers import BertForTokenClassification, BertForSequenceClassification
 
+
 from src.constants import LABELS, MAX_SEQ_LENGTH, NUM_LABLES, PAD_LABEL, SPEC_LABEL, SPLITS
 from src.dataset import CommentDataset, MoodDataset
 # from src.model import BertModel
@@ -140,10 +141,10 @@ def train_loop1(model: torch.nn.Module):
 
 
 def train2(model: torch.nn.Module):
-    dataset = MoodDataset()
+    dataset = MoodDataset(withExt=False, fromRetrans=False)
     train_dataset, val_dataset = random_split(
         dataset, [0.9,0.1])
-    train_dataset = ConcatDataset([train_dataset, MoodDataset(fromRetrans=True)])
+    train_dataset = ConcatDataset([train_dataset, MoodDataset(withOrigin=False,fromRetrans=True, withExt=True)])
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
                               shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
@@ -153,6 +154,7 @@ def train2(model: torch.nn.Module):
         model = model.cuda()
 
     logging.info(f'Start training task2')  
+    logging.info(f"dataset size: train: {train_dataset.__len__()} val: {val_dataset.__len__()}")
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=LEARNING_RATE, eps=1e-8)
     for epoch_num in range(EPOCHS):
