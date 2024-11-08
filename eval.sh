@@ -13,4 +13,4 @@ id=$(date "+%m%d%H%M")
 
 export TRANSFORMERS_OFFLINE=1
 
-python ./eval.py --id=$id --mode=$mode --pretrained=$pretrained --lr=$lr --batch_size=$batch_size --niter=$epochs --workers=$workers --save_freq=$save_freq --debug --log
+python eval.py --id=$id --mode=$mode --pretrained=$pretrained --lr=$lr --batch_size=$batch_size --niter=$epochs --workers=$workers --save_freq=$save_freq --debug --log

@@ -141,10 +141,10 @@ def train_loop1(model: torch.nn.Module):
 
 
 def train2(model: torch.nn.Module):
-    dataset = MoodDataset(withExt=False, fromRetrans=False)
+    dataset = MoodDataset()
     train_dataset, val_dataset = random_split(
         dataset, [0.9,0.1])
-    train_dataset = ConcatDataset([train_dataset, MoodDataset(withOrigin=False,fromRetrans=True, withExt=True)])
+    train_dataset = ConcatDataset([train_dataset, MoodDataset(withOrigin=False,withGPT=True,fromRetrans=False, withExt=False)])
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
                               shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
@@ -155,6 +155,8 @@ def train2(model: torch.nn.Module):
 
     logging.info(f'Start training task2')  
     logging.info(f"dataset size: train: {train_dataset.__len__()} val: {val_dataset.__len__()}")
+    # print(dataset.__len__())
+    # return;
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=LEARNING_RATE, eps=1e-8)
     for epoch_num in range(EPOCHS):
@@ -163,27 +165,30 @@ def train2(model: torch.nn.Module):
         train_idx = 0
         model.train()
         for train_data, mood_label in tqdm(train_loader):
-            train_idx += 1
-            mask = train_data['attention_mask'].to(device)
-            # mask = torch.ones_like(train_data['attention_mask']).to(device)
-            input_id = train_data['input_ids'].to(device)
-            token_type_ids = train_data['token_type_ids'].to(device)
-            mood_label = mood_label.to(device)
-            # 输入模型训练结果：损失及分类概率
-            optimizer.zero_grad()
-            loss, logits = model(input_ids=input_id, attention_mask=mask, labels=mood_label,
-                                 token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
-            # 获取最大概率值
-            predictions = logits.argmax(dim=1)
-            # print(predictions, mood_label)
-          # 计算准确率
-            acc = (predictions == mood_label).float().mean()  # TODO
-            total_acc_train += acc.item()
-            total_loss_train += loss.item()
-      # 反向传递
-            loss.backward()
-            # 参数更新
-            optimizer.step()
+            try:
+                train_idx += 1
+                mask = train_data['attention_mask'].to(device)
+                # mask = torch.ones_like(train_data['attention_mask']).to(device)
+                input_id = train_data['input_ids'].to(device)
+                token_type_ids = train_data['token_type_ids'].to(device)
+                mood_label = mood_label.to(device)
+                # 输入模型训练结果：损失及分类概率
+                optimizer.zero_grad()
+                loss, logits = model(input_ids=input_id, attention_mask=mask, labels=mood_label,
+                                     token_type_ids=token_type_ids, return_dict=False, output_hidden_states=False, output_attentions=False)
+                # 获取最大概率值
+                predictions = logits.argmax(dim=1)
+                # print(predictions, mood_label)
+              # 计算准确率
+                acc = (predictions == mood_label).float().mean()  # TODO
+                total_acc_train += acc.item()
+                total_loss_train += loss.item()
+          # 反向传递
+                loss.backward()
+                # 参数更新
+                optimizer.step()
+            except (RuntimeError, AttributeError) as e:
+                print(e, mood_label)
 
         total_acc_val = 0
         val_idx = 0

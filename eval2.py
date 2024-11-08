@@ -1,8 +1,9 @@
 import logging
+
 import torch
 import os
-from transformers import BertForSequenceClassification, BertForTokenClassification
 import pandas as pd
+from transformers import BertForSequenceClassification, BertForTokenClassification, BertTokenizerFast, BertTokenizerFast
 from src.constants import MAX_SEQ_LENGTH,  NUM_LABLES, SPEC_LABEL, SPLITS, ids_to_labels
 from src.config import config, out_dir
 from tqdm import tqdm
@@ -20,7 +21,7 @@ df = pd.read_csv(SPLITS['test'])
 tokenized_data = []
 
 model_path1='./out/remote/10212228-train/t1-e16.pt'
-model_path2='./out/remote/10310047-train/t2-e5.pt'
+model_path2='./out/remote/11061728/t2-e11.pt'
 
 state_dict_task1 = torch.load(model_path1, weights_only=True)
 state_dict_task2 = torch.load(model_path2, weights_only=True)
@@ -81,6 +82,10 @@ model = BertForTokenClassification.from_pretrained(config.pretrained, num_labels
 model.resize_token_embeddings(len(tokenizer))
 model.load_state_dict(state_dict=state_dict_task1)
 
+
+with open('vocab.txt', 'r') as file:
+    vocab = [line.strip() for line in file.readlines()]
+tokenizer.add_tokens(vocab)
 if use_cuda:
     model = model.cuda()
 
@@ -91,9 +96,17 @@ model = BertForSequenceClassification.from_pretrained(config.pretrained, num_lab
 if use_cuda:
     model = model.cuda()
 
+tokenizer = BertTokenizerFast.from_pretrained(config.pretrained, cache_dir='./cache')
+
+with open('vocab.txt', 'r') as file:
+    vocab = [line.strip() for line in file.readlines()]
+tokenizer.add_tokens(vocab)
+
 model.resize_token_embeddings(len(tokenizer))
 model.load_state_dict(state_dict=state_dict_task2)
 
+rpO = lambda t: '' if t =='O' else t
+df['text'] = df.apply(lambda row: ''.join([rpO(a) + b for a, b in zip(row['BIO_anno'].split(), row['text'])]), axis=1)
 df_out['class'] = df['text'].progress_map(lambda x: eval_class(model,x))
 
 
