@@ -19,20 +19,23 @@ MOOD_TYPE = {
 }
 
 LABELS =  ["B-BANK", "I-BANK", "B-PRODUCT", "I-PRODUCT", 'B-COMMENTS_N', 'I-COMMENTS_N', 'B-COMMENTS_ADJ', 'I-COMMENTS_ADJ', 'O']
+SOS_LABEL = '[SOS]'
+EOS_LABEL = '[EOS]'
+PAD_LABEL = '[PAD]'
+ALL_LABELS = LABELS + [SOS_LABEL,EOS_LABEL, PAD_LABEL]
 
-SPEC_LABEL = len(LABELS) 
-PAD_LABEL = len(LABELS) + 1
 # SPEC_LABEL = -1
 
-labels_to_ids = {k: v for v, k in enumerate((LABELS))}
-ids_to_labels = {v: k for v, k in enumerate((LABELS))}
-ids_to_labels[SPEC_LABEL] = '[UNK]'
-ids_to_labels[PAD_LABEL] = '[PAD]'
+labels_to_ids = {k: v for v, k in enumerate((ALL_LABELS))}
+ids_to_labels = {v: k for v, k in enumerate((ALL_LABELS))}
+
+SOS_IDS = labels_to_ids[SOS_LABEL]
+EOS_IDS = labels_to_ids[EOS_LABEL]
+PAD_IDS = labels_to_ids[PAD_LABEL]
+
 print(ids_to_labels)
 
-NUM_LABLES = len(LABELS)+ 2
-
-
+NUM_LABLES = len(ALL_LABELS)
 
 COMMENT_COLUMNS = {
     'text': 'text',

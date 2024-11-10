@@ -3,10 +3,11 @@ import torch
 import os
 from transformers import BertForSequenceClassification, BertForTokenClassification
 import pandas as pd
-from src.constants import MAX_SEQ_LENGTH,  NUM_LABLES, SPEC_LABEL, SPLITS, ids_to_labels
+from src.constants import MAX_SEQ_LENGTH,  NUM_LABLES, SPLITS, ids_to_labels
 from src.config import config, out_dir
 from tqdm import tqdm
 
+from src.model import NER_Model
 from src.tokenizer2 import tokenizer, tokenize_sentence, realign
 
 use_cuda = config.cuda
@@ -19,8 +20,9 @@ df = pd.read_csv(SPLITS['test'])
 
 tokenized_data = []
 
-model_path1='./out/remote/10212228-train/t1-e16.pt'
-model_path2='./out/remote/10310047-train/t2-e5.pt'
+# model_path1='./out/remote/10212228-train/t1-e16.pt'
+model_path1='./out/remote/1101609-train/t1-best.pth'
+model_path2='./out/remote/11081410/t2-e12.pt'
 
 state_dict_task1 = torch.load(model_path1, weights_only=True)
 state_dict_task2 = torch.load(model_path2, weights_only=True)
@@ -31,21 +33,22 @@ def eval_token(model, sentence, with_mask=True, no_sep=True):
     
     mask = data['attention_mask'].to(device)
     input_ids = data['input_ids'].to(device)
+    token_type_ids = data['token_type_ids'].to(device)
     # label_ids = torch.Tensor(align_word_ids(sentence)).unsqueeze(0).to(device)
     # print(input_ids)
     
-    logits = model(input_ids, mask, None)
+    pred = model(input_ids=input_ids, mask=mask, labels=None, token_type_ids=token_type_ids)
 
-    logits_clean  = []
-    if(with_mask):
-        logits_clean = logits[0][mask != 0]
-    else:
-        logits_clean = logits[0]
+    # pred_clean  = []
+    # if(with_mask):
+        # pred_clean = pred[mask != 0]
+    # else:
+        # pred_clean = pred
 
     
-    predictions = logits_clean.argmax(dim=1).tolist()    # print(sentence)
-    prediction_label = [ids_to_labels[i] for i in predictions]
-    # print(prediction_label)
+    # predictions = pred_clean.tolist()    # print(sentence)
+    # print(pred)
+    prediction_label = [ids_to_labels[i] for i in pred[0]]
 
     if(no_sep):
         prediction_label = prediction_label[1:-1]
@@ -77,8 +80,8 @@ df_out = df.copy()
 
 logging.info(f"with model: 1: {model_path1}; 2: {model_path2}")
 
-model = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES, cache_dir='./cache')
-model.resize_token_embeddings(len(tokenizer))
+# model = BertForTokenClassification.from_pretrained(config.pretrained, num_labels=NUM_LABLES, cache_dir='./cache')
+model = NER_Model()
 model.load_state_dict(state_dict=state_dict_task1)
 
 if use_cuda:

@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 import re
 from src.config import config
-from src.constants import LABELS, NUM_LABLES,ids_to_labels,MAX_SEQ_LENGTH, SPEC_LABEL, PAD_LABEL, labels_to_ids
+from src.constants import LABELS, NUM_LABLES,ids_to_labels,MAX_SEQ_LENGTH, SOS_IDS, EOS_IDS, PAD_IDS,labels_to_ids
 from transformers import BertModel, BertForTokenClassification, BertTokenizerFast
 
 from src.utils import BIO_to_inner
@@ -99,8 +99,8 @@ def tokenize_sentence(sentence, labels=None, align=True,tokenizer=tokenizer, max
 
     if(type(tokenized_labels[0])=='str'): tokenized_labels = [labels_to_ids[i] for i in tokenized_labels]
 
-    tokenized_labels = [SPEC_LABEL] + tokenized_labels + [SPEC_LABEL]
-    tokenized_labels += [PAD_LABEL] * (
+    tokenized_labels = [SOS_IDS] + tokenized_labels + [EOS_IDS]
+    tokenized_labels += [PAD_IDS] * (
         tokenized_data['input_ids'].numel() - len(tokenized_labels))
 
     # print(tokenized_labels)

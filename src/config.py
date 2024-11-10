@@ -4,6 +4,7 @@ import time
 import os
 import logging
 import torch
+from transformers.utils.logging import sys
 
 
 parser = argparse.ArgumentParser()
